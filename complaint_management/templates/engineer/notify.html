@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{%load static%}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notify Users</title>
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+</head>
+<body>
+    
+    {% block content %}
+    <div class="container mt-5">
+        <h2 class="text-center">Accepted Complaints</h2>
+        <div class="mt-4">
+            {% if complaints %}
+                {% for complaint in complaints %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ complaint.title }}</h5>
+                        <p class="card-text">{{ complaint.description }}</p>
+                        <p class="card-text"><strong>Status:</strong> {{ complaint.status }}</p>
+                        <form method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="complaint_id" value="{{ complaint.id }}">
+                            <button type="submit" class="btn btn-primary">Notify</button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-center">No complaints available.</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endblock %}
+    
+</body>
+</html>

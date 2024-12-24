@@ -1,0 +1,9 @@
+to delete all complaints
+
+python manage.py shell
+
+
+from complaints.models import Complaint
+
+# Delete all complaints
+Complaint.objects.all().delete()

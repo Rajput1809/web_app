@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raise a Complaint</title>
+    {% load static %}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'complaints/css/style.css' %}">
+    <style>
+        #camera-icon, #mic-icon {
+            cursor: pointer;
+        }
+        #photo-preview img, #photo-preview canvas {
+            max-width: 100%;
+            margin-top: 10px;
+        }
+        #department-title {
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        #department-image {
+            max-width: 100%;
+            max-height: 150px;
+            margin: 10px auto;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="d-flex justify-content-center align-items-center vh-100">
+        <div class="card shadow-sm" style="max-width: 500px; width: 100%;">
+            <div class="card-header text-center bg-primary text-white">
+                <h4>Raise a Complaint</h4>
+            </div>
+            <div class="card-body">
+                <!-- Department Image and Title -->
+                <div class="text-center">
+                    <img id="department-image" src="{% static 'complaints/images/placeholder.png' %}" alt="Department Image">
+                    <h5 id="department-title">Department Name</h5>
+                </div>
+
+                <form method="POST">
+                    {% csrf_token %}
+                    <!-- Title Field -->
+                    <div class="mb-4 position-relative">
+                        <label for="title" class="form-label">Title:</label>
+                        <div class="d-flex align-items-center">
+                            <input type="text" name="title" id="title" class="form-control" placeholder="Enter the title" required>
+                            <!-- Microphone Icon for Title -->
+                            <i class="fas fa-microphone fa-lg ms-3" id="mic-title-icon" title="Record Audio for Title"></i>
+                        </div>
+                    </div>
+
+                    <!-- Description Field -->
+                    <div class="mb-4 position-relative">
+                        <label for="description" class="form-label">Description:</label>
+                        <div class="d-flex align-items-center">
+                            <!-- Camera Icon -->
+                            <i class="fas fa-camera fa-lg me-3" id="camera-icon" title="Upload or Capture Photo"></i>
+                            <input type="file" id="file-input" accept="image/*" style="display: none;">
+                            <textarea name="description" id="description" class="form-control" rows="4" placeholder="Provide a detailed description of your complaint" required></textarea>
+                            <!-- Microphone Icon for Description -->
+                            <i class="fas fa-microphone fa-lg ms-3" id="mic-description-icon" title="Record Audio for Description"></i>
+                        </div>
+                        <!-- Photo Preview -->
+                        <div id="photo-preview"></div>
+                    </div>
+
+                    <!-- Get Location Button -->
+                    <div class="mb-4">
+                        <button type="button" id="get-location-btn" class="btn btn-secondary w-100">Get Location</button>
+                    </div>
+                    <div id="location-display" class="mb-4"></div>
+                    <div>
+                        <input type="hidden" name="latitude" id="latitude">
+                        <input type="hidden" name="longitude" id="longitude">
+                        <input type="hidden" name="suburb" id="suburb">
+                        <input type="hidden" name="city" id="city">
+                        <input type="hidden" name="pincode" id="pincode">
+                        <input type="hidden" name="state" id="state">
+                        <input type="hidden" name="country" id="country">
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">Submit Complaint</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.min.js"></script>
+
+    <script>
+        const apiKey = "1d35cc9758fb4a5c91732691f23aba0a";
+        const apiEndpoint = "https://api.opencagedata.com/geocode/v1/json";
+
+        // Dynamic Department Info
+        const urlParams = new URLSearchParams(window.location.search);
+        const departmentName = urlParams.get('department');
+        const departmentImage = urlParams.get('image');
+
+        if (departmentName) {
+            document.getElementById("department-title").textContent = departmentName;
+        }
+
+        if (departmentImage) {
+            document.getElementById("department-image").src = departmentImage;
+        }
+
+        // Camera functionality for upload or capture
+        document.getElementById("camera-icon").addEventListener("click", function () {
+            if (confirm("Choose an option:\nOK: Capture Photo\nCancel: Upload from System")) {
+                const video = document.createElement('video');
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const captureButton = document.createElement('button');
+
+                captureButton.textContent = 'Capture';
+                captureButton.classList.add('btn', 'btn-success', 'w-100', 'mt-3');
+
+                const photoContainer = document.getElementById("photo-preview");
+                photoContainer.innerHTML = ''; // Clear any previous content
+                photoContainer.appendChild(video);
+                photoContainer.appendChild(captureButton);
+
+                navigator.mediaDevices.getUserMedia({ video: true })
+                    .then(stream => {
+                        video.srcObject = stream;
+                        video.play();
+
+                        captureButton.addEventListener('click', function () {
+                            canvas.width = video.videoWidth;
+                            canvas.height = video.videoHeight;
+                            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                            const imgData = canvas.toDataURL('image/png');
+                            const img = new Image();
+                            img.src = imgData;
+                            photoContainer.innerHTML = '';
+                            photoContainer.appendChild(img);
+
+                            stream.getTracks().forEach(track => track.stop());
+                        });
+                    })
+                    .catch(error => {
+                        alert("Unable to access the camera: " + error.message);
+                    });
+            } else {
+                document.getElementById("file-input").click();
+            }
+        });
+
+        document.getElementById("file-input").addEventListener("change", function () {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    const photoContainer = document.getElementById("photo-preview");
+                    photoContainer.innerHTML = ''; // Clear previous content
+                    photoContainer.appendChild(img);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Microphone functionality (Speech-to-text)
+        function activateMicrophone(inputFieldId, languagePrompt) {
+            const choice = prompt(languagePrompt, "1");
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
+            recognition.lang = choice === "1" ? "kn-IN" : choice === "2" ? "hi-IN" : "en-US";
+            recognition.interimResults = true;
+
+            recognition.onresult = function (event) {
+                document.getElementById(inputFieldId).value = event.results[0][0].transcript;
+            };
+
+            recognition.onerror = function (event) {
+                alert("Error: " + event.error);
+            };
+
+            recognition.start();
+        }
+
+        // Microphone for Title
+        document.getElementById("mic-title-icon").addEventListener("click", function () {
+            activateMicrophone("title", "Choose language for Title:\n1. Kannada (kn-IN)\n2. Hindi (hi-IN)\n3. English (en-US)");
+        });
+
+        // Microphone for Description
+        document.getElementById("mic-description-icon").addEventListener("click", function () {
+            activateMicrophone("description", "Choose language for Description:\n1. Kannada (kn-IN)\n2. Hindi (hi-IN)\n3. English (en-US)");
+        });
+
+        // Location functionality with OpenCageData API
+        document.getElementById('get-location-btn').addEventListener('click', function () {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function (position) {
+                    const latitude = position.coords.latitude;
+                    const longitude = position.coords.longitude;
+
+                    // Fetch location data from OpenCageData
+                    const url = `${apiEndpoint}?key=${apiKey}&q=${latitude}+${longitude}`;
+                    fetch(url)
+                        .then(response => response.json())
+                        .then(data => {
+                            const result = data.results[0].components;
+
+                            const suburb = result.suburb || "N/A";
+                            const city = result.city || "N/A";
+                            const pincode = result.postcode || "N/A";
+                            const state = result.state || "N/A";
+                            const country = result.country || "N/A";
+
+                            const location = `Location: ${suburb}, ${pincode}, ${state}, ${country} (Coordinates: ${latitude}, ${longitude})`;
+                            document.getElementById('location-display').textContent = location;
+
+                            document.getElementById('latitude').value = latitude;
+                            document.getElementById('longitude').value = longitude;
+                            document.getElementById('suburb').value = suburb;
+                            document.getElementById('city').value = city;
+                            document.getElementById('pincode').value = pincode;
+                            document.getElementById('state').value = state;
+                            document.getElementById('country').value = country;
+                        })
+                        .catch(error => {
+                            alert("Error fetching location data: " + error.message);
+                        });
+                }, function () {
+                    alert('Unable to retrieve location.');
+                });
+            } else {
+                alert('Geolocation is not supported by this browser.');
+            }
+        });
+    </script>
+</body>
+</html>
